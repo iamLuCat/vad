@@ -41,27 +41,28 @@ class VadHandler {
   int? _currentNumFramesToEmit;
 
   final _onSpeechEndController = StreamController<List<double>>.broadcast();
-  final _onFrameProcessedController = StreamController<
-      ({double isSpeech, double notSpeech, List<double> frame})>.broadcast();
+  final _onFrameProcessedController =
+      StreamController<({double isSpeech, double notSpeech, List<double> frame})>.broadcast();
   final _onSpeechStartController = StreamController<void>.broadcast();
   final _onRealSpeechStartController = StreamController<void>.broadcast();
   final _onVADMisfireController = StreamController<void>.broadcast();
   final _onErrorController = StreamController<String>.broadcast();
-  final _onEmitChunkController =
-      StreamController<({List<double> samples, bool isFinal})>.broadcast();
+  final _onEmitChunkController = StreamController<({List<double> samples, bool isFinal, Uint8List origin})>.broadcast();
 
   /// Constructor
   /// [isDebug] - Whether to enable debug logging (default: false)
-  VadHandler._({bool isDebug = false}) {
+  /// [audioRecorder] - Optional AudioRecorder instance to use for recording
+  VadHandler._({bool isDebug = false, AudioRecorder? audioRecorder}) {
     _isDebug = isDebug;
+    _audioRecorder = audioRecorder;
   }
 
   /// Stream of speech end events containing processed audio data as floating point samples
   Stream<List<double>> get onSpeechEnd => _onSpeechEndController.stream;
 
   /// Stream of frame processing events with speech probabilities and raw frame data
-  Stream<({double isSpeech, double notSpeech, List<double> frame})>
-      get onFrameProcessed => _onFrameProcessedController.stream;
+  Stream<({double isSpeech, double notSpeech, List<double> frame})> get onFrameProcessed =>
+      _onFrameProcessedController.stream;
 
   /// Stream of initial speech start detection events
   Stream<void> get onSpeechStart => _onSpeechStartController.stream;
@@ -76,8 +77,7 @@ class VadHandler {
   Stream<String> get onError => _onErrorController.stream;
 
   /// Stream of audio chunk events containing intermediate audio data during speech with final flag
-  Stream<({List<double> samples, bool isFinal})> get onEmitChunk =>
-      _onEmitChunkController.stream;
+  Stream<({List<double> samples, bool isFinal, Uint8List origin})> get onEmitChunk => _onEmitChunkController.stream;
 
   void _handleVadEvent(VadEvent event) {
     switch (event.type) {
@@ -114,7 +114,7 @@ class VadHandler {
           final int16List = event.audioData!.buffer.asInt16List();
           final floatSamples = int16List.map((e) => e / 32768.0).toList();
           _onEmitChunkController
-              .add((samples: floatSamples, isFinal: event.isFinal ?? false));
+              .add((samples: floatSamples, isFinal: event.isFinal ?? false, origin: event.audioData!));
         }
         break;
     }
@@ -153,10 +153,8 @@ class VadHandler {
       int minSpeechFrames = 3,
       bool submitUserSpeechOnPause = false,
       String model = 'v4',
-      String baseAssetPath =
-          'https://cdn.jsdelivr.net/npm/@keyurmaru/vad@0.0.1/',
-      String onnxWASMBasePath =
-          'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.22.0/dist/',
+      String baseAssetPath = 'https://cdn.jsdelivr.net/npm/@keyurmaru/vad@0.0.1/',
+      String onnxWASMBasePath = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.22.0/dist/',
       RecordConfig? recordConfig,
       int endSpeechPadFrames = 1,
       int numFramesToEmit = 0,
@@ -282,12 +280,12 @@ class VadHandler {
         print('VadHandler: Custom audio stream connected successfully');
       }
     } else {
-      // Create a new AudioRecorder if needed (e.g., after stopListening disposed it)
+      // Ensure AudioRecorder is provided when not using custom audio stream
       if (_audioRecorder == null) {
-        if (_isDebug) {
-          print('VadHandler: Creating new AudioRecorder instance');
-        }
-        _audioRecorder = AudioRecorder();
+        _onErrorController.add(
+            'VadHandler: AudioRecorder not provided. Please pass an AudioRecorder instance when creating VadHandler.');
+        print('VadHandler: AudioRecorder not provided.');
+        return;
       }
 
       if (_isDebug) {
@@ -438,10 +436,12 @@ class VadHandler {
   /// Factory method to create VAD handler instance
   ///
   /// [isDebug] - Enable debug logging for troubleshooting (default: false)
+  /// [audioRecorder] - Optional AudioRecorder instance to use for recording.
+  ///                   Required when not using custom audioStream in startListening.
   ///
   /// Uses unified implementation with record library for both web and native platforms.
   /// Supports Silero VAD models v4 and v5.
-  static VadHandler create({bool isDebug = false}) {
-    return VadHandler._(isDebug: isDebug);
+  static VadHandler create({bool isDebug = false, AudioRecorder? audioRecorder}) {
+    return VadHandler._(isDebug: isDebug, audioRecorder: audioRecorder);
   }
 }

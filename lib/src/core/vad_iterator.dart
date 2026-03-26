@@ -118,8 +118,7 @@ class VadIterator {
   /// Reset VAD state and clear internal buffers
   void reset() {
     if (_isDebug) {
-      print(
-          'VadIteratorImpl: Resetting state (processed $_totalFramesProcessed frames so far)');
+      print('VadIteratorImpl: Resetting state (processed $_totalFramesProcessed frames so far)');
     }
     _speaking = false;
     _redemptionCounter = 0;
@@ -159,8 +158,7 @@ class VadIterator {
 
   Future<void> _processFrame(Float32List data) async {
     if (data.length != _frameSamples) {
-      print(
-          'VadIteratorImpl: Unexpected frame size: ${data.length}, expected: $_frameSamples');
+      print('VadIteratorImpl: Unexpected frame size: ${data.length}, expected: $_frameSamples');
       return;
     }
 
@@ -181,10 +179,8 @@ class VadIterator {
       _onVadEvent?.call(VadEvent(
         type: VadEventType.frameProcessed,
         timestamp: _getCurrentTimestamp(),
-        message:
-            'Frame processed at ${_getCurrentTimestamp().toStringAsFixed(3)}s',
-        probabilities: SpeechProbabilities(
-            isSpeech: speechProb, notSpeech: 1.0 - speechProb),
+        message: 'Frame processed at ${_getCurrentTimestamp().toStringAsFixed(3)}s',
+        probabilities: SpeechProbabilities(isSpeech: speechProb, notSpeech: 1.0 - speechProb),
         frameData: frameData,
       ));
 
@@ -221,14 +217,12 @@ class VadIterator {
         _speechStartIndex = 0;
         _speechRealStartFired = false;
         if (_isDebug) {
-          print(
-              'VadIteratorImpl: Speech started (prob: ${speechProb.toStringAsFixed(3)})');
+          print('VadIteratorImpl: Speech started (prob: ${speechProb.toStringAsFixed(3)})');
         }
         _onVadEvent?.call(VadEvent(
           type: VadEventType.start,
           timestamp: _getCurrentTimestamp(),
-          message:
-              'Speech started at ${_getCurrentTimestamp().toStringAsFixed(3)}s',
+          message: 'Speech started at ${_getCurrentTimestamp().toStringAsFixed(3)}s',
         ));
         _speechBuffer.addAll(_preSpeechBuffer);
         _preSpeechBuffer.clear();
@@ -243,8 +237,7 @@ class VadIterator {
       _speechPositiveFrameCount++;
 
       // Add validation event when speech frames exceed minimum threshold
-      if (_speechPositiveFrameCount == _minSpeechFrames &&
-          !_speechRealStartFired) {
+      if (_speechPositiveFrameCount == _minSpeechFrames && !_speechRealStartFired) {
         _speechRealStartFired = true;
         if (_isDebug) {
           print('VadIteratorImpl: Real speech validated');
@@ -252,8 +245,7 @@ class VadIterator {
         _onVadEvent?.call(VadEvent(
           type: VadEventType.realStart,
           timestamp: _getCurrentTimestamp(),
-          message:
-              'Speech validated at ${_getCurrentTimestamp().toStringAsFixed(3)}s',
+          message: 'Speech validated at ${_getCurrentTimestamp().toStringAsFixed(3)}s',
         ));
       }
     } else if (speechProb < _negativeSpeechThreshold) {
@@ -269,12 +261,10 @@ class VadIterator {
         _numFramesToEmit > 0 &&
         _speechBuffer.length - _speechStartIndex >= _numFramesToEmit &&
         _redemptionCounter <= _endSpeechPadFrames) {
-      final framesToSend = _speechBuffer.sublist(
-          _speechStartIndex, _speechStartIndex + _numFramesToEmit);
+      final framesToSend = _speechBuffer.sublist(_speechStartIndex, _speechStartIndex + _numFramesToEmit);
       _speechStartIndex = _speechStartIndex + _numFramesToEmit;
       _sentRedemptionFrames = _redemptionCounter;
-      _emitChunkEvent(framesToSend,
-          'Audio chunk emitted at ${_getCurrentTimestamp().toStringAsFixed(3)}s');
+      _emitChunkEvent(framesToSend, 'Audio chunk emitted at ${_getCurrentTimestamp().toStringAsFixed(3)}s');
     }
   }
 
@@ -283,8 +273,7 @@ class VadIterator {
       _speechBuffer.add(data);
       _redemptionCounter++;
       if (_isDebug) {
-        print(
-            'VadIteratorImpl: Redemption counter incremented to $_redemptionCounter/$_redemptionFrames');
+        print('VadIteratorImpl: Redemption counter incremented to $_redemptionCounter/$_redemptionFrames');
       }
 
       if (_redemptionCounter >= _redemptionFrames) {
@@ -301,8 +290,7 @@ class VadIterator {
 
           // Calculate the audio buffer with endSpeechPadFrames
           final framesToRemove = _redemptionFrames - _endSpeechPadFrames;
-          const startIndex =
-              0; // Always start from beginning for complete speech segment
+          const startIndex = 0; // Always start from beginning for complete speech segment
 
           final audioBufferPad = _processAudioBuffer(
             frames: _speechBuffer,
@@ -315,8 +303,7 @@ class VadIterator {
           _onVadEvent?.call(VadEvent(
             type: VadEventType.end,
             timestamp: _getCurrentTimestamp(),
-            message:
-                'Speech ended at ${_getCurrentTimestamp().toStringAsFixed(3)}s',
+            message: 'Speech ended at ${_getCurrentTimestamp().toStringAsFixed(3)}s',
             audioData: audio,
           ));
 
@@ -325,14 +312,12 @@ class VadIterator {
         } else {
           // Misfire
           if (_isDebug) {
-            print(
-                'VadIteratorImpl: Misfire (only $_speechPositiveFrameCount positive frames)');
+            print('VadIteratorImpl: Misfire (only $_speechPositiveFrameCount positive frames)');
           }
           _onVadEvent?.call(VadEvent(
             type: VadEventType.misfire,
             timestamp: _getCurrentTimestamp(),
-            message:
-                'Misfire detected at ${_getCurrentTimestamp().toStringAsFixed(3)}s',
+            message: 'Misfire detected at ${_getCurrentTimestamp().toStringAsFixed(3)}s',
           ));
         }
         // Reset counters and buffers
@@ -343,8 +328,7 @@ class VadIterator {
 
         // Preserve frames between endSpeechPadFrames and redemptionFrames for next pre-speech buffer
         if (_endSpeechPadFrames < _redemptionFrames) {
-          final framesToKeep = _speechBuffer.sublist(
-              _speechBuffer.length - (_redemptionFrames - _endSpeechPadFrames));
+          final framesToKeep = _speechBuffer.sublist(_speechBuffer.length - (_redemptionFrames - _endSpeechPadFrames));
           _speechBuffer.clear();
           _preSpeechBuffer.clear();
           _preSpeechBuffer.addAll(framesToKeep);
@@ -379,8 +363,7 @@ class VadIterator {
       _onVadEvent?.call(VadEvent(
         type: VadEventType.end,
         timestamp: _getCurrentTimestamp(),
-        message:
-            'Speech forcefully ended at ${_getCurrentTimestamp().toStringAsFixed(3)}s',
+        message: 'Speech forcefully ended at ${_getCurrentTimestamp().toStringAsFixed(3)}s',
         audioData: _combineFrames(_speechBuffer),
       ));
       // Reset state
@@ -415,8 +398,7 @@ class VadIterator {
       combined.setRange(offset, offset + frame.length, frame);
       offset += frame.length;
     }
-    final int16Data = Int16List.fromList(
-        combined.map((e) => (e * 32767).clamp(-32768, 32767).toInt()).toList());
+    final int16Data = Int16List.fromList(combined.map((e) => (e * 32767).clamp(-32768, 32767).toInt()).toList());
     final Uint8List audioData = Uint8List.view(int16Data.buffer);
     return audioData;
   }
@@ -439,8 +421,7 @@ class VadIterator {
 
     if (framesToRemove > 0) {
       // Standard case: remove frames from the end
-      final endIndex =
-          (frames.length - framesToRemove).clamp(startIndex, frames.length);
+      final endIndex = (frames.length - framesToRemove).clamp(startIndex, frames.length);
       result = frames.sublist(startIndex, endIndex);
     } else {
       // Need to add silence padding
@@ -452,8 +433,7 @@ class VadIterator {
   }
 
   /// Emits a chunk VadEvent with the given frames and message
-  void _emitChunkEvent(List<Float32List> frames, String message,
-      {bool isFinal = false}) {
+  void _emitChunkEvent(List<Float32List> frames, String message, {bool isFinal = false}) {
     final audioData = _combineFrames(frames);
     _onVadEvent?.call(VadEvent(
       type: VadEventType.chunk,
@@ -485,8 +465,7 @@ class VadIterator {
       );
 
       if (frames.isNotEmpty) {
-        _emitChunkEvent(frames,
-            'Final audio chunk emitted at ${_getCurrentTimestamp().toStringAsFixed(3)}s',
+        _emitChunkEvent(frames, 'Final audio chunk emitted at ${_getCurrentTimestamp().toStringAsFixed(3)}s',
             isFinal: true);
       }
     }
@@ -525,8 +504,7 @@ class VadIterator {
     required int minSpeechFrames,
     required String model,
     String baseAssetPath = 'https://cdn.jsdelivr.net/npm/@keyurmaru/vad@0.0.1/',
-    String onnxWASMBasePath =
-        'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.22.0/dist/',
+    String onnxWASMBasePath = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.22.0/dist/',
     int endSpeechPadFrames = 1,
     int numFramesToEmit = 0,
     dynamic threadingConfig,
